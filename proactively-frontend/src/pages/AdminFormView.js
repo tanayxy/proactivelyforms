@@ -96,7 +96,7 @@ export default function AdminFormView() {
 
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/dashboard')} sx={{ mb: 2 }}>
+      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')} sx={{ mb: 2 }}>
         Back to Dashboard
       </Button>
       <Card sx={{ p: 3, boxShadow: 8, borderRadius: 4, mb: 4 }}>
