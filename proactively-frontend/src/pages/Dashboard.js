@@ -15,17 +15,14 @@ export default function Dashboard() {
       try {
         const res = await api.get('/auth/me');
         setUser(res.data);
-        console.log("Dashboard User Role:", res.data.role);
         if (res.data.role === 'admin') {
           const formsRes = await api.get('/forms/my-forms');
           setForms(formsRes.data);
         } else {
-          // For users, show forms they joined (not implemented in backend, so just show joined forms after join)
           setForms([]);
         }
       } catch (error) {
         console.error("Error fetching user in Dashboard:", error);
-        // Handle error, e.g., redirect to login if authentication fails
       }
     };
     fetchUser();

@@ -12,25 +12,21 @@ export default function MyForms() {
     const fetchFormsAndUserRole = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
-        console.warn("No token found in localStorage for MyForms. Skipping API calls.");
         return;
       }
 
       try {
         const userRes = await api.get('/auth/me');
-        console.log("User role from API:", userRes.data.role);
         setUserRole(userRes.data.role);
 
         if (userRes.data.role === 'admin') {
           const formsRes = await api.get('/forms/my-forms');
           setForms(formsRes.data);
         } else {
-          // For users, show forms they joined (this part is not fully implemented in backend yet, so currently it will be empty)
           setForms([]);
         }
       } catch (error) {
         console.error("Error fetching user role or forms:", error);
-        // Handle error, e.g., redirect to login or show an error message
       }
     };
     fetchFormsAndUserRole();

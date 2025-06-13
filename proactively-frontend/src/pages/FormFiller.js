@@ -46,8 +46,6 @@ export default function FormFiller() {
           socketRef.current.on('error', (data) => {
             setSnackbar({ open: true, message: data.message });
           });
-        } else {
-          console.warn("No token found for socket connection. User updates might not be authenticated.");
         }
       } catch (error) {
         console.error("Error fetching form or user data:", error);
@@ -71,7 +69,6 @@ export default function FormFiller() {
     if (socketRef.current) {
       socketRef.current.emit('formUpdate', { formId: id, fieldId, value, userId: user?.id, currentVersion: formResponseVersion });
     } else {
-      console.error("Socket not initialized. Cannot send form update.");
       setSnackbar({ open: true, message: "Error: Cannot send update, socket not ready." });
     }
   };

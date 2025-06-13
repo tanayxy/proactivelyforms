@@ -1,11 +1,9 @@
--- Drop existing tables if they exist (in reverse order of dependencies)
 DROP TABLE IF EXISTS form_participants;
 DROP TABLE IF EXISTS form_responses;
 DROP TABLE IF EXISTS form_fields;
 DROP TABLE IF EXISTS forms;
 DROP TABLE IF EXISTS users;
 
--- Create users table first (no dependencies)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -14,7 +12,6 @@ CREATE TABLE users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create forms table (depends on users)
 CREATE TABLE forms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(255) NOT NULL,
@@ -25,19 +22,17 @@ CREATE TABLE forms (
     share_code VARCHAR(10) UNIQUE NOT NULL
 );
 
--- Create form_fields table (depends on forms)
 CREATE TABLE form_fields (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     form_id UUID REFERENCES forms(id) ON DELETE CASCADE,
     field_type VARCHAR(20) NOT NULL CHECK (field_type IN ('text', 'number', 'dropdown')),
     label VARCHAR(255) NOT NULL,
     required BOOLEAN DEFAULT false,
-    options JSONB, -- For dropdown fields
+    options JSONB,
     order_index INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create form_responses table (depends on forms and users)
 CREATE TABLE form_responses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     form_id UUID REFERENCES forms(id) ON DELETE CASCADE,
@@ -47,7 +42,6 @@ CREATE TABLE form_responses (
     version INTEGER DEFAULT 0
 );
 
--- Create form_participants table (depends on forms and users)
 CREATE TABLE form_participants (
     form_id UUID REFERENCES forms(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -55,7 +49,6 @@ CREATE TABLE form_participants (
     PRIMARY KEY (form_id, user_id)
 );
 
--- Create form_user_submissions table
 CREATE TABLE IF NOT EXISTS form_user_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     form_id UUID REFERENCES forms(id) ON DELETE CASCADE,
@@ -64,7 +57,6 @@ CREATE TABLE IF NOT EXISTS form_user_submissions (
     submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes
 CREATE INDEX idx_forms_created_by ON forms(created_by);
 CREATE INDEX idx_form_fields_form_id ON form_fields(form_id);
 CREATE INDEX idx_form_responses_form_id ON form_responses(form_id);
@@ -73,5 +65,4 @@ CREATE INDEX idx_form_participants_user_id ON form_participants(user_id);
 CREATE INDEX IF NOT EXISTS idx_form_user_submissions_user_id ON form_user_submissions(user_id);
 CREATE INDEX IF NOT EXISTS idx_form_user_submissions_form_id ON form_user_submissions(form_id);
 
--- Add version column to form_responses table
 ALTER TABLE form_responses ADD COLUMN version INTEGER DEFAULT 0; 

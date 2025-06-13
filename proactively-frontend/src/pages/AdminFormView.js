@@ -51,13 +51,10 @@ export default function AdminFormView() {
           });
 
           socketRef.current.on('formSubmitted', (newSubmission) => {
-            console.log('New form submitted:', newSubmission);
             setSubmittedResponses(prevSubmissions => [newSubmission, ...prevSubmissions]);
           });
 
           socketRef.current.emit('requestParticipants', id);
-        } else {
-          console.warn("No token found for socket connection in AdminFormView. Active participants might not be tracked.");
         }
       } catch (err) {
         setError('Failed to fetch form data.');

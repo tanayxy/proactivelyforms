@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Form = require('../models/Form');
 const { auth, adminOnly } = require('../middleware/auth');
-const io = require('../server').io; // Corrected path to server.js
+const io = require('../server').io;
 
 // Create a new form (admin only)
 router.post('/', auth, adminOnly, async (req, res) => {
@@ -14,7 +14,6 @@ router.post('/', auth, adminOnly, async (req, res) => {
       created_by: req.user.id
     });
 
-    // Create form fields
     if (fields && fields.length > 0) {
       for (const field of fields) {
         let options = null;
@@ -36,7 +35,6 @@ router.post('/', auth, adminOnly, async (req, res) => {
   }
 });
 
-// Get all forms created by the user
 router.get('/my-forms', auth, async (req, res) => {
   try {
     const forms = await Form.findAll({ created_by: req.user.id });
@@ -46,7 +44,6 @@ router.get('/my-forms', auth, async (req, res) => {
   }
 });
 
-// Get a specific form
 router.get('/:id', auth, async (req, res) => {
   try {
     const form = await Form.getFormWithFields(req.params.id);
@@ -85,17 +82,14 @@ router.get('/:id/participants', auth, async (req, res) => {
   }
 });
 
-// Update form response
 router.post('/:id/response', auth, async (req, res) => {
   try {
     const { fieldId, value } = req.body;
     const formId = req.params.id;
 
-    // Check if response exists
     let response = await Form.getFormResponse(formId);
     
     if (!response) {
-      // Create new response
       response = await Form.pool.query(
         `INSERT INTO form_responses (form_id, field_values, last_updated_by)
          VALUES ($1, $2, $3)
@@ -103,7 +97,6 @@ router.post('/:id/response', auth, async (req, res) => {
         [formId, { [fieldId]: value }, req.user.id]
       );
     } else {
-      // Update existing response
       response = await Form.pool.query(
         `UPDATE form_responses 
          SET field_values = field_values || $1::jsonb,
@@ -121,7 +114,6 @@ router.post('/:id/response', auth, async (req, res) => {
   }
 });
 
-// Get form response
 router.get('/:id/response', auth, async (req, res) => {
   try {
     const response = await Form.getFormResponse(req.params.id);
@@ -146,7 +138,7 @@ router.post('/:id/submit', auth, async (req, res) => {
   try {
     const { answers } = req.body;
     const formId = req.params.id;
-    const userId = req.user.id; // Get user ID from authenticated request
+    const userId = req.user.id;
 
     if (!answers) {
       return res.status(400).json({ error: 'Answers are required for submission.' });
@@ -154,16 +146,8 @@ router.post('/:id/submit', auth, async (req, res) => {
 
     const submittedResponse = await Form.saveSubmittedResponse(formId, userId, answers);
     
-    // Emit a Socket.IO event to notify admins/participants of new submission
-    // Get the io instance from the server (assuming it's passed or accessible globally)
-    // This requires a way to access the `io` instance from server.js in routes.forms.js
-    // For simplicity, let's assume `io` can be imported or passed if you have a setup for it.
-    // If not, we'll need to refactor to pass `io` to routes.
-    
-    // Temporary placeholder for emitting event, assuming io is accessible
     if (io) {
-      // Fetch the submitted response again with user email for broadcasting
-      const submissionWithEmail = await Form.getSubmittedResponseById(submittedResponse.id); // Need a new function in Form.js
+      const submissionWithEmail = await Form.getSubmittedResponseById(submittedResponse.id);
       io.to(formId).emit('formSubmitted', submissionWithEmail);
     } else {
       console.warn('Socket.IO instance not accessible in forms route for submission event.');

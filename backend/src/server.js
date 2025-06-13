@@ -52,10 +52,9 @@ io.on('connection', (socket) => {
   if (token) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-      console.log("JWT decoded user:", decoded); // Log the decoded user info
+      console.log("JWT decoded user:", decoded);
       userId = decoded.id;
       userEmail = decoded.email;
-      // Attach user info to socket for later use
       socket.user = { id: userId, email: userEmail };
     } catch (err) {
       console.error('Socket authentication failed:', err.message);
@@ -65,15 +64,13 @@ io.on('connection', (socket) => {
     }
   } else {
     console.log('Client connected without token.');
-    // For guests, we can still allow them to view, but they won't be tracked as specific users
-    // Or you might want to disconnect them if authentication is strictly required for all actions.
   }
 
   socket.on('joinForm', async (formId) => {
     socket.join(formId);
     console.log(`Client joined form: ${formId}`);
 
-    if (socket.user && socket.user.id) { // Ensure user is authenticated
+    if (socket.user && socket.user.id) {
       try {
         // Add user to active participants for this form
         if (!activeFormParticipants.has(formId)) {
@@ -99,8 +96,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('formUpdate', async (data) => {
-    const { formId, fieldId, value, currentVersion } = data; // userId is now taken from socket.user.id
-    const userId = socket.user?.id; // Get userId from authenticated socket
+    const { formId, fieldId, value, currentVersion } = data;
+    const userId = socket.user?.id;
 
     if (!userId) {
       socket.emit('error', { message: 'User not authenticated for update.' });
@@ -108,14 +105,12 @@ io.on('connection', (socket) => {
     }
 
     try {
-      // First, fetch the current version from the database
       const currentFormResponse = await pool.query(
         'SELECT version FROM form_responses WHERE form_id = $1',
         [formId]
       );
 
       if (currentFormResponse.rows.length === 0) {
-        // Form response not found, handle this error case
         socket.emit('error', { message: 'Form response not found.' });
         return;
       }
@@ -160,7 +155,6 @@ io.on('connection', (socket) => {
       const { userId, formId } = userInfo;
       if (activeFormParticipants.has(formId)) {
         const participants = activeFormParticipants.get(formId);
-        // Remove the disconnected user
         const newParticipants = new Set(Array.from(participants).filter(p => p.socketId !== socket.id));
         activeFormParticipants.set(formId, newParticipants);
 

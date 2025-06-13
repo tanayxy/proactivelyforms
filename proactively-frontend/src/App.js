@@ -13,7 +13,6 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check if token is present and valid
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
       if (!token) return setIsAuthenticated(false);
