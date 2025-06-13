@@ -89,6 +89,39 @@ class Form extends BaseModel {
     const result = await this.pool.query(query, [shareCode]);
     return result.rows[0];
   }
+
+  async getSubmittedResponses(formId) {
+    const query = `
+      SELECT fus.*, u.email as submitted_by_email
+      FROM form_user_submissions fus
+      JOIN users u ON fus.user_id = u.id
+      WHERE fus.form_id = $1
+      ORDER BY fus.submitted_at DESC
+    `;
+    const result = await this.pool.query(query, [formId]);
+    return result.rows;
+  }
+
+  async saveSubmittedResponse(formId, userId, answers) {
+    const query = `
+      INSERT INTO form_user_submissions (form_id, user_id, answers)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `;
+    const result = await this.pool.query(query, [formId, userId, answers]);
+    return result.rows[0];
+  }
+
+  async getSubmittedResponseById(submissionId) {
+    const query = `
+      SELECT fus.*, u.email as submitted_by_email
+      FROM form_user_submissions fus
+      JOIN users u ON fus.user_id = u.id
+      WHERE fus.id = $1
+    `;
+    const result = await this.pool.query(query, [submissionId]);
+    return result.rows[0];
+  }
 }
 
 module.exports = new Form(); 

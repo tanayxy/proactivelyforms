@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Form = require('../models/Form');
 const { auth, adminOnly } = require('../middleware/auth');
+const io = require('../server').io; // Corrected path to server.js
 
 // Create a new form (admin only)
 router.post('/', auth, adminOnly, async (req, res) => {
@@ -127,6 +128,51 @@ router.get('/:id/response', auth, async (req, res) => {
     res.json(response);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Get all submitted responses for a specific form (admin only)
+router.get('/:id/submissions', auth, adminOnly, async (req, res) => {
+  try {
+    const submissions = await Form.getSubmittedResponses(req.params.id);
+    res.json(submissions);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Submit a completed form (user or admin)
+router.post('/:id/submit', auth, async (req, res) => {
+  try {
+    const { answers } = req.body;
+    const formId = req.params.id;
+    const userId = req.user.id; // Get user ID from authenticated request
+
+    if (!answers) {
+      return res.status(400).json({ error: 'Answers are required for submission.' });
+    }
+
+    const submittedResponse = await Form.saveSubmittedResponse(formId, userId, answers);
+    
+    // Emit a Socket.IO event to notify admins/participants of new submission
+    // Get the io instance from the server (assuming it's passed or accessible globally)
+    // This requires a way to access the `io` instance from server.js in routes.forms.js
+    // For simplicity, let's assume `io` can be imported or passed if you have a setup for it.
+    // If not, we'll need to refactor to pass `io` to routes.
+    
+    // Temporary placeholder for emitting event, assuming io is accessible
+    if (io) {
+      // Fetch the submitted response again with user email for broadcasting
+      const submissionWithEmail = await Form.getSubmittedResponseById(submittedResponse.id); // Need a new function in Form.js
+      io.to(formId).emit('formSubmitted', submissionWithEmail);
+    } else {
+      console.warn('Socket.IO instance not accessible in forms route for submission event.');
+    }
+
+    res.status(201).json(submittedResponse);
+  } catch (error) {
+    console.error('Error submitting form:', error);
+    res.status(400).json({ error: error.message || 'Failed to submit form' });
   }
 });
 

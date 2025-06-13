@@ -43,7 +43,8 @@ CREATE TABLE form_responses (
     form_id UUID REFERENCES forms(id) ON DELETE CASCADE,
     field_values JSONB DEFAULT '{}',
     last_updated_by UUID REFERENCES users(id),
-    last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER DEFAULT 0
 );
 
 -- Create form_participants table (depends on forms and users)
@@ -70,4 +71,7 @@ CREATE INDEX idx_form_responses_form_id ON form_responses(form_id);
 CREATE INDEX idx_form_participants_form_id ON form_participants(form_id);
 CREATE INDEX idx_form_participants_user_id ON form_participants(user_id);
 CREATE INDEX IF NOT EXISTS idx_form_user_submissions_user_id ON form_user_submissions(user_id);
-CREATE INDEX IF NOT EXISTS idx_form_user_submissions_form_id ON form_user_submissions(form_id); 
+CREATE INDEX IF NOT EXISTS idx_form_user_submissions_form_id ON form_user_submissions(form_id);
+
+-- Add version column to form_responses table
+ALTER TABLE form_responses ADD COLUMN version INTEGER DEFAULT 0; 

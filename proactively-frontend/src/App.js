@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import FormBuilder from './pages/FormBuilder';
 import FormFiller from './pages/FormFiller';
+import AdminFormView from './pages/AdminFormView';
 import Navbar from './components/Navbar';
 import api from './api/api';
 
@@ -50,6 +51,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/form/new" element={<FormBuilder />} />
         <Route path="/form/:id" element={<FormFiller />} />
+        <Route path="/admin/forms/:id/live" element={<AdminFormView />} />
       </Routes>
     </Router>
   );

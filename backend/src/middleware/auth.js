@@ -23,6 +23,7 @@ const auth = async (req, res, next) => {
 
 const adminOnly = async (req, res, next) => {
   try {
+    console.log("Auth Middleware - User Role:", req.user ? req.user.role : "User object not present");
     if (req.user.role !== 'admin') {
       throw new Error();
     }

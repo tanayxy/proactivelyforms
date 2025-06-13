@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Typography, Box, TextField, MenuItem, Button, Snackbar, Card } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import api from '../api/api';
-import { socket } from '../socket';
+import { initializeSocket } from '../socket';
 
 export default function FormFiller() {
   const { id } = useParams();
@@ -12,38 +12,82 @@ export default function FormFiller() {
   const [user, setUser] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+  const [formResponseVersion, setFormResponseVersion] = useState(0);
   const navigate = useNavigate();
+  const socketRef = useRef(null);
 
   useEffect(() => {
     const fetchForm = async () => {
-      const res = await api.get(`/forms/${id}`);
-      setForm(res.data);
-      const resp = await api.get(`/forms/${id}/response`);
-      setResponse(resp.data?.field_values || {});
-      const userRes = await api.get('/auth/me');
-      setUser(userRes.data);
+      try {
+        const res = await api.get(`/forms/${id}`);
+        setForm(res.data);
+        const resp = await api.get(`/forms/${id}/response`);
+        setResponse(resp.data?.field_values || {});
+        setFormResponseVersion(resp.data?.version || 0);
+        const userRes = await api.get('/auth/me');
+        setUser(userRes.data);
+
+        const token = localStorage.getItem('token');
+        if (token) {
+          if (socketRef.current) {
+            socketRef.current.disconnect();
+          }
+          socketRef.current = initializeSocket(token);
+          socketRef.current.connect();
+          socketRef.current.emit('joinForm', id);
+
+          socketRef.current.on('formUpdated', (data) => {
+            setResponse(prev => ({ ...prev, [data.fieldId]: data.value }));
+            setFormResponseVersion(data.version);
+          });
+          socketRef.current.on('formConflict', (data) => {
+            setSnackbar({ open: true, message: data.message + ' Please refresh to see the latest changes.' });
+          });
+          socketRef.current.on('error', (data) => {
+            setSnackbar({ open: true, message: data.message });
+          });
+        } else {
+          console.warn("No token found for socket connection. User updates might not be authenticated.");
+        }
+      } catch (error) {
+        console.error("Error fetching form or user data:", error);
+        setSnackbar({ open: true, message: 'Failed to load form.' });
+      }
     };
     fetchForm();
-    socket.connect();
-    socket.emit('joinForm', id);
-    socket.on('formUpdated', (data) => {
-      setResponse(prev => ({ ...prev, [data.fieldId]: data.value }));
-    });
+
     return () => {
-      socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current.off('formUpdated');
+        socketRef.current.off('formConflict');
+        socketRef.current.off('error');
+      }
     };
   }, [id]);
 
-  const handleChange = async (fieldId, value) => {
+  const handleChange = (fieldId, value) => {
     setResponse(prev => ({ ...prev, [fieldId]: value }));
-    await api.post(`/forms/${id}/response`, { fieldId, value });
-    socket.emit('formUpdate', { formId: id, fieldId, value, userId: user?.id });
+    if (socketRef.current) {
+      socketRef.current.emit('formUpdate', { formId: id, fieldId, value, userId: user?.id, currentVersion: formResponseVersion });
+    } else {
+      console.error("Socket not initialized. Cannot send form update.");
+      setSnackbar({ open: true, message: "Error: Cannot send update, socket not ready." });
+    }
   };
 
-  const handleSubmit = () => {
-    setSubmitted(true);
-    setSnackbar({ open: true, message: 'Form submitted!' });
-    // Optionally, send a flag to backend to mark as submitted
+  const handleSubmit = async () => {
+    try {
+      await api.post(`/forms/${id}/submit`, { answers: response });
+      setSubmitted(true);
+      setSnackbar({ open: true, message: 'Form submitted successfully!' });
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setSnackbar({ open: true, message: error.response?.data?.error || 'Failed to submit form.' });
+    }
   };
 
   if (!form) return <Typography>Loading...</Typography>;
